@@ -1,39 +1,65 @@
 #!/usr/bin/env python3
-"""Most Recently Used caching module.
-"""
-from collections import OrderedDict
-
+""" BasicCaching module"""
 from base_caching import BaseCaching
 
 
-class MRUCache(BaseCaching):
-    """Represents an object that allows storing and
-    retrieving items from a dictionary with an MRU
-    removal mechanism when the limit is reached.
-    """
+class LFUCache(BaseCaching):
+    """LIFO Cache"""
+
     def __init__(self):
-        """Initializes the cache.
-        """
+        """Init the instance"""
         super().__init__()
-        self.cache_data = OrderedDict()
+        self.stack = []
+        self.stack_count = {}
 
     def put(self, key, item):
-        """Adds an item in the cache.
-        """
+        """Assing to a dictionary the item value for the key key."""
         if key is None or item is None:
             return
-        if key not in self.cache_data:
-            if len(self.cache_data) + 1 > BaseCaching.MAX_ITEMS:
-                mru_key, _ = self.cache_data.popitem(False)
-                print("DISCARD:", mru_key)
-            self.cache_data[key] = item
-            self.cache_data.move_to_end(key, last=False)
+
+        self.cache_data[key] = item
+
+        item_count = self.stack_count.get(key, None)
+
+        if item_count is not None:
+            self.stack_count[key] += 1
         else:
-            self.cache_data[key] = item
+            self.stack_count[key] = 1
+
+        if len(self.cache_data) > self.MAX_ITEMS:
+            discard = self.stack.pop(0)
+            del self.stack_count[discard]
+            del self.cache_data[discard]
+            print("DISCARD: {}".format(discard))
+
+        if key not in self.stack:
+            self.stack.insert(0, key)
+
+        self.move_to_right(item=key)
 
     def get(self, key):
-        """Retrieves an item by key.
-        """
-        if key is not None and key in self.cache_data:
-            self.cache_data.move_to_end(key, last=False)
-        return self.cache_data.get(key, None)
+        """ return the value in self.cache_data linked to key."""
+        value = self.cache_data.get(key, None)
+        if value is not None:
+            self.stack_count[key] += 1
+            self.move_to_right(item=key)
+
+        return value
+
+    def move_to_right(self, item):
+        """Add 1 for all elements less the key"""
+        length = len(self.stack)
+
+        idx = self.stack.index(item)
+        item_count = self.stack_count[item]
+
+        for i in range(idx, length):
+            if i != (length - 1):
+                nxt = self.stack[i + 1]
+                nxt_count = self.stack_count[nxt]
+
+                if nxt_count > item_count:
+                    break
+
+        self.stack.insert(i + 1, item)
+        self.stack.remove(item)
