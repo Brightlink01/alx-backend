@@ -22,7 +22,7 @@ class Config(object):
 app.config.from_object('1-app.Config')
 
 
-@app.route('/', methods=['GET'], strict_slashes=False)
+@app.route('/', strict_slashes=False)
 def index() -> str:
     """ GET
     return: 1-index.html
